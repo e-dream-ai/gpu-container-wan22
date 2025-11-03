@@ -32,7 +32,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 RUN pip install --no-cache-dir "huggingface_hub[cli]"
 RUN mkdir -p /opt/models/wan22-ti2v-5b
-RUN huggingface-cli download Wan-AI/Wan2.2-TI2V-5B \
+RUN python -m huggingface_hub download Wan-AI/Wan2.2-TI2V-5B \
     --local-dir /opt/models/wan22-ti2v-5b \
     --local-dir-use-symlinks False
 
