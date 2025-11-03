@@ -11,10 +11,14 @@ ENV TEMP_DIR=/tmp/video_processing
 
 # System dependencies
 RUN apt-get update && apt-get install -y \
-    python3.10 python3-pip git wget ffmpeg libgl1 libglib2.0-0 \
+    python3.10 python3-pip python3-dev git wget ffmpeg libgl1 libglib2.0-0 \
+    build-essential gcc g++ make cmake \
     && ln -sf /usr/bin/python3.10 /usr/bin/python \
     && ln -sf /usr/bin/pip3 /usr/bin/pip \
     && apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip and install build dependencies
+RUN pip install --default-timeout=100 --no-cache-dir --upgrade pip setuptools wheel packaging
 
 RUN pip install --default-timeout=100 --no-cache-dir \
     torch>=2.4.0 \
