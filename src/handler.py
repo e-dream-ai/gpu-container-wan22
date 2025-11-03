@@ -40,9 +40,15 @@ def validate_params(params: Dict[str, Any]) -> Dict[str, Any]:
         validated['width'] = 1280
         validated['height'] = 704
     
-    validated['num_frames'] = params.get('num_frames', 120)
+    if 'duration' in params and params.get('duration'):
+        duration_seconds = float(params['duration'])
+        validated['num_frames'] = int(duration_seconds * 24)
+        logger.info(f"Duration {duration_seconds}s converted to {validated['num_frames']} frames (24fps)")
+    else:
+        validated['num_frames'] = params.get('num_frames', 120)
+    
     if not (1 <= validated['num_frames'] <= 300):
-        raise ValueError(f"num_frames must be between 1 and 300, got: {validated['num_frames']}")
+        raise ValueError(f"num_frames must be between 1 and 300, got: {validated['num_frames']} (calculated duration: {validated['num_frames']/24:.2f}s)")
     
     validated['steps'] = params.get('steps', 10)
     if not (1 <= validated['steps'] <= 50):
@@ -221,7 +227,8 @@ def main():
     parser.add_argument('--image-path', type=str, help='Image file path for I2V')
     parser.add_argument('--width', type=int, default=1280, help='Video width')
     parser.add_argument('--height', type=int, default=704, help='Video height')
-    parser.add_argument('--num-frames', type=int, default=120, help='Number of frames')
+    parser.add_argument('--num-frames', type=int, default=120, help='Number of frames (duration = num_frames / 24 seconds)')
+    parser.add_argument('--duration', type=float, help='Video duration in seconds (automatically calculates num_frames at 24fps)')
     parser.add_argument('--steps', type=int, default=10, help='Number of denoising steps')
     parser.add_argument('--seed', type=int, help='Random seed')
     
@@ -245,9 +252,13 @@ def main():
             'task': args.task,
             'width': args.width,
             'height': args.height,
-            'num_frames': args.num_frames,
             'steps': args.steps,
         }
+        if args.duration is not None:
+            params['duration'] = args.duration
+        else:
+            params['num_frames'] = args.num_frames
+        
         if args.image_url:
             params['image_url'] = args.image_url
         if args.image_path:

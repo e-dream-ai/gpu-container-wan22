@@ -33,7 +33,7 @@ Input (Text/Image) → Wan2.2-TI2V-5B Generator → Video Output → R2 Upload
     "task": "t2v",
     "width": 1280,
     "height": 704,
-    "num_frames": 120,
+    "duration": 5,
     "steps": 10,
     "seed": 42
   }
@@ -50,7 +50,7 @@ Input (Text/Image) → Wan2.2-TI2V-5B Generator → Video Output → R2 Upload
     "image_url": "https://example.com/image.jpg",
     "width": 1280,
     "height": 704,
-    "num_frames": 120,
+    "duration": 5,
     "steps": 10,
     "seed": 42
   }
@@ -59,17 +59,18 @@ Input (Text/Image) → Wan2.2-TI2V-5B Generator → Video Output → R2 Upload
 
 ### Parameter Reference
 
-| Parameter    | Type   | Required | Default | Description                            |
-| ------------ | ------ | -------- | ------- | -------------------------------------- |
-| `prompt`     | string | Yes      | -       | Text prompt for video generation       |
-| `task`       | string | No       | `t2v`   | Generation task: `t2v` or `i2v`        |
-| `image_url`  | string | No\*     | -       | URL of input image (required for I2V)  |
-| `image_path` | string | No\*     | -       | Local path to image (required for I2V) |
-| `width`      | int    | No       | 1280    | Video width (720P: 1280 or 704)        |
-| `height`     | int    | No       | 704     | Video height (720P: 704 or 1280)       |
-| `num_frames` | int    | No       | 120     | Number of frames (~5s at 24fps)        |
-| `steps`      | int    | No       | 10      | Number of denoising steps              |
-| `seed`       | int    | No       | None    | Random seed for generation             |
+| Parameter    | Type   | Required | Default | Description                                                     |
+| ------------ | ------ | -------- | ------- | --------------------------------------------------------------- |
+| `prompt`     | string | Yes      | -       | Text prompt for video generation                                |
+| `task`       | string | No       | `t2v`   | Generation task: `t2v` or `i2v`                                 |
+| `image_url`  | string | No\*     | -       | URL of input image (required for I2V)                           |
+| `image_path` | string | No\*     | -       | Local path to image (required for I2V)                          |
+| `width`      | int    | No       | 1280    | Video width (720P: 1280 or 704)                                 |
+| `height`     | int    | No       | 704     | Video height (720P: 704 or 1280)                                |
+| `num_frames` | int    | No       | 120     | Number of frames (duration = num_frames ÷ 24 seconds)           |
+| `duration`   | float  | No       | -       | Video duration in seconds (auto-calculates num_frames at 24fps) |
+| `steps`      | int    | No       | 10      | Number of denoising steps                                       |
+| `seed`       | int    | No       | None    | Random seed for generation                                      |
 
 \*At least one image input method is required for I2V task.
 
@@ -135,10 +136,20 @@ This container can upload processed videos to Cloudflare R2 and return presigned
 - **Frame Rate**: 24fps
 - **Model Size**: ~20GB (downloaded during build)
 
-### Generation Time
+### Video Duration
 
-- **5-second video**: ~9 minutes on RTX 4090
-- **10-second video**: ~18 minutes on RTX 4090
+The video duration is controlled by either:
+
+- **`num_frames`**: Number of frames to generate (default: 120)
+- **`duration`**: Duration in seconds (automatically calculates num_frames)
+
+**Formula**: `duration (seconds) = num_frames ÷ 24` (Wan2.2-TI2V-5B generates at 24fps)
+
+**Examples**:
+
+- 120 frames = 5 seconds
+- 240 frames = 10 seconds
+- 300 frames = 12.5 seconds (maximum)
 
 ## Example Usage
 
@@ -156,7 +167,7 @@ payload = {
         "task": "t2v",
         "width": 1280,
         "height": 704,
-        "num_frames": 120,
+        "duration": 5,
         "steps": 10
     }
 }
@@ -175,7 +186,7 @@ payload = {
         "image_url": "https://example.com/cat.jpg",
         "width": 1280,
         "height": 704,
-        "num_frames": 120,
+        "duration": 5,
         "steps": 10
     }
 }
