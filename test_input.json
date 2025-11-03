@@ -1,0 +1,11 @@
+{
+  "input": {
+    "prompt": "Two anthropomorphic cats in comfy boxing gear and bright gloves fight intensely on a spotlighted stage",
+    "task": "t2v",
+    "width": 1280,
+    "height": 704,
+    "num_frames": 120,
+    "steps": 10,
+    "seed": 42
+  }
+}
