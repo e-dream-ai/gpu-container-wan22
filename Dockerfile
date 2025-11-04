@@ -33,7 +33,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir "huggingface_hub"
 
 WORKDIR /opt/models
-RUN git lfs install && \
+RUN git lfs install --skip-smudge && \
     git clone https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B wan22-ti2v-5b && \
     cd wan22-ti2v-5b && \
     git lfs pull && \
