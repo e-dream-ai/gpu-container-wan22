@@ -27,7 +27,6 @@ WORKDIR /opt
 RUN git clone https://github.com/Wan-Video/Wan2.2.git wan22
 WORKDIR /opt/wan22
 
-COPY requirements.txt /opt/wan22/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir "huggingface_hub"
 
