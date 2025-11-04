@@ -1,13 +1,12 @@
 import os
-import json
 import tempfile
 import logging
-import argparse
 from typing import Dict, Any
 from pathlib import Path
 import uuid
 import boto3
 from botocore.config import Config as BotoConfig
+import runpod
 from services.generator_service import Wan22Generator
 from utils.cleanup_manager import CleanupManager
 import requests
@@ -217,64 +216,29 @@ def process_video_generation(params: Dict[str, Any]) -> Dict[str, Any]:
         cleanup_manager.cleanup_all()
 
 
-def main():
-    """Main entry point for the script."""
-    parser = argparse.ArgumentParser(description='Wan2.2-TI2V-5B Video Generation')
-    parser.add_argument('--input', type=str, help='JSON input file path')
-    parser.add_argument('--prompt', type=str, help='Text prompt for generation')
-    parser.add_argument('--task', type=str, default='t2v', choices=['t2v', 'i2v'], help='Generation task')
-    parser.add_argument('--image-url', type=str, help='Image URL for I2V')
-    parser.add_argument('--image-path', type=str, help='Image file path for I2V')
-    parser.add_argument('--width', type=int, default=1280, help='Video width')
-    parser.add_argument('--height', type=int, default=704, help='Video height')
-    parser.add_argument('--num-frames', type=int, default=120, help='Number of frames (duration = num_frames / 24 seconds)')
-    parser.add_argument('--duration', type=float, help='Video duration in seconds (automatically calculates num_frames at 24fps)')
-    parser.add_argument('--steps', type=int, default=10, help='Number of denoising steps')
-    parser.add_argument('--seed', type=int, help='Random seed')
-    
-    args = parser.parse_args()
-    
-    # Build params dict
-    if args.input:
-        # Load from JSON file
-        with open(args.input, 'r') as f:
-            params = json.load(f)
-            # Handle nested 'input' key if present
-            if 'input' in params:
-                params = params['input']
-    else:
-        # Build from command line args
-        if not args.prompt:
-            parser.error("--prompt is required when not using --input")
+def handler(job: Dict[str, Any]) -> Dict[str, Any]:
+    """RunPod serverless handler function."""
+    try:
+        _input = job.get("input") or {}
+        params = _input.copy()
         
-        params = {
-            'prompt': args.prompt,
-            'task': args.task,
-            'width': args.width,
-            'height': args.height,
-            'steps': args.steps,
+        # Process generation
+        result = process_video_generation(params)
+        
+        return {
+            'status': result.get('status', 'success'),
+            'download_url': result.get('download_url'),
+            'task': result.get('task'),
+            'resolution': result.get('resolution'),
+            'num_frames': result.get('num_frames'),
+            'steps': result.get('steps'),
         }
-        if args.duration is not None:
-            params['duration'] = args.duration
-        else:
-            params['num_frames'] = args.num_frames
         
-        if args.image_url:
-            params['image_url'] = args.image_url
-        if args.image_path:
-            params['image_path'] = args.image_path
-        if args.seed is not None:
-            params['seed'] = args.seed
-    
-    # Process generation
-    result = process_video_generation(params)
-    
-    # Output result as JSON
-    print(json.dumps(result, indent=2))
-    
-    return result
+    except Exception as e:
+        logger.error(f"Handler failed: {e}", exc_info=True)
+        raise
 
 
 if __name__ == "__main__":
-    main()
+    runpod.serverless.start({"handler": handler})
 
