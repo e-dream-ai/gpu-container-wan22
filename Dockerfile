@@ -40,7 +40,8 @@ RUN pip install --no-cache-dir \
     ftfy \
     dashscope \
     imageio-ffmpeg \
-    "numpy>=1.23.5,<2"
+    "numpy>=1.23.5,<2" \
+    einops
 
 RUN pip install --no-cache-dir flash_attn || echo "flash_attn installation failed, continuing without it (optional)"
 
