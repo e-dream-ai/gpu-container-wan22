@@ -21,18 +21,10 @@ jobs:
     runs-on: container-builder
 
     steps:
-      - name: Free Disk Space
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: true
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          lfs: true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -50,12 +42,10 @@ jobs:
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           BRANCH="${{ github.ref_name }}"
           VERSION="${TIMESTAMP}-${BRANCH}"
-
           TAG_SUFFIX="${{ github.event.inputs.docker_tag }}"
           if [ -n "$TAG_SUFFIX" ]; then
             VERSION="${VERSION}-${TAG_SUFFIX}"
           fi
-
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "image_tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}" >> $GITHUB_OUTPUT
           echo "latest_tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
