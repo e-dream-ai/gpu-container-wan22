@@ -27,7 +27,23 @@ WORKDIR /opt
 RUN git clone https://github.com/Wan-Video/Wan2.2.git wan22
 WORKDIR /opt/wan22
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir \
+    torchaudio \
+    "opencv-python>=4.9.0.80" \
+    "diffusers>=0.31.0" \
+    "transformers>=4.49.0,<=4.51.3" \
+    "tokenizers>=0.20.3" \
+    "accelerate>=1.1.1" \
+    tqdm \
+    "imageio[ffmpeg]" \
+    easydict \
+    ftfy \
+    dashscope \
+    imageio-ffmpeg \
+    "numpy>=1.23.5,<2"
+
+RUN pip install --no-cache-dir flash_attn || echo "flash_attn installation failed, continuing without it (optional)"
+
 RUN pip install --no-cache-dir "huggingface_hub"
 
 WORKDIR /opt/models
