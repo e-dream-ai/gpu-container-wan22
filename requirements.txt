@@ -2,6 +2,7 @@ runpod==1.6.2
 requests>=2.31.0
 boto3>=1.34.0
 Pillow>=10.0.0
+websocket-client
 tqdm>=4.65.0
 validators>=0.22.0
 easydict>=1.10

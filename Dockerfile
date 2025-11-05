@@ -1,69 +1,83 @@
-FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
-#
-ENV DEBIAN_FRONTEND=noninteractive
-ENV PYTHONUNBUFFERED=1
-ENV PIP_PREFER_BINARY=1
-ENV CMAKE_BUILD_PARALLEL_LEVEL=8
-ENV FORCE_CUDA=1
-ENV MODEL_CACHE_DIR=/opt/models
-ENV TEMP_DIR=/tmp/video_processing
+# Use ComfyUI-compatible base image
+FROM wlsdml1114/multitalk-base:1.7 as runtime
 
-RUN apt-get update && apt-get install -y \
-    python3.10 python3-pip python3-dev git git-lfs wget ffmpeg libgl1 libglib2.0-0 \
-    build-essential gcc g++ make cmake ninja-build \
-    && ln -sf /usr/bin/python3.10 /usr/bin/python \
-    && ln -sf /usr/bin/pip3 /usr/bin/pip \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+# Install dependencies
+RUN pip install -U "huggingface_hub[hf_transfer]"
+RUN pip install runpod websocket-client boto3
 
-RUN git lfs install
+WORKDIR /
 
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel packaging
-RUN pip install --no-cache-dir \
-    torch==2.4.0+cu118 \
-    torchvision==0.19.0+cu118 \
-    torchaudio==2.4.0+cu118 \
-    --index-url https://download.pytorch.org/whl/cu118
+# Install ComfyUI
+RUN git clone https://github.com/comfyanonymous/ComfyUI.git && \
+    cd /ComfyUI && \
+    pip install -r requirements.txt
 
-WORKDIR /opt
-RUN git clone https://github.com/Wan-Video/Wan2.2.git wan22
-WORKDIR /opt/wan22
+# Install ComfyUI Manager
+RUN cd /ComfyUI/custom_nodes && \
+    git clone https://github.com/Comfy-Org/ComfyUI-Manager.git && \
+    cd ComfyUI-Manager && \
+    pip install -r requirements.txt
 
-# Create constraints file to prevent torch/torchvision upgrades
-RUN echo "torch==2.4.0+cu118" > /tmp/constraints.txt && \
-    echo "torchvision==0.19.0+cu118" >> /tmp/constraints.txt && \
-    echo "torchaudio==2.4.0+cu118" >> /tmp/constraints.txt
+# Install GGUF support
+RUN cd /ComfyUI/custom_nodes && \
+    git clone https://github.com/city96/ComfyUI-GGUF && \
+    cd ComfyUI-GGUF && \
+    pip install -r requirements.txt
 
-RUN pip install --no-cache-dir \
-    --constraint /tmp/constraints.txt \
-    "opencv-python>=4.9.0.80" \
-    "diffusers>=0.31.0" \
-    "transformers>=4.49.0,<=4.51.3" \
-    "tokenizers>=0.20.3" \
-    "accelerate>=1.1.1" \
-    tqdm \
-    "imageio[ffmpeg]" \
-    easydict \
-    ftfy \
-    dashscope \
-    imageio-ffmpeg \
-    "numpy>=1.23.5,<2" \
-    einops
+# Install KJNodes
+RUN cd /ComfyUI/custom_nodes && \
+    git clone https://github.com/kijai/ComfyUI-KJNodes && \
+    cd ComfyUI-KJNodes && \
+    pip install -r requirements.txt
 
-RUN pip install --no-cache-dir --constraint /tmp/constraints.txt flash_attn || echo "flash_attn installation failed, continuing without it (optional)"
+# Install VideoHelperSuite
+RUN cd /ComfyUI/custom_nodes && \
+    git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite && \
+    cd ComfyUI-VideoHelperSuite && \
+    pip install -r requirements.txt
 
-RUN pip install --no-cache-dir --constraint /tmp/constraints.txt "huggingface_hub"
+# Install GGUF FantasyTalking
+RUN cd /ComfyUI/custom_nodes && \
+    git clone https://github.com/kael558/ComfyUI-GGUF-FantasyTalking && \
+    cd ComfyUI-GGUF-FantasyTalking && \
+    pip install -r requirements.txt
 
-WORKDIR /opt/models
-RUN git lfs install --skip-smudge && \
-    git clone https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B wan22-ti2v-5b && \
-    cd wan22-ti2v-5b && \
-    git lfs pull && \
-    git lfs checkout
+# Install WanVideo custom nodes
+RUN cd /ComfyUI/custom_nodes && \
+    git clone https://github.com/orssorbit/ComfyUI-wanBlockswap
 
-WORKDIR /opt/app
-COPY src/ ./src/
-COPY requirements.txt ./
-RUN pip install --no-cache-dir --constraint /tmp/constraints.txt -r requirements.txt
-RUN mkdir -p /opt/app/output
+RUN cd /ComfyUI/custom_nodes && \
+    git clone https://github.com/kijai/ComfyUI-WanVideoWrapper && \
+    cd ComfyUI-WanVideoWrapper && \
+    pip install -r requirements.txt
 
-CMD ["python", "-u", "src/handler.py"]
+RUN cd /ComfyUI/custom_nodes && \
+    git clone https://github.com/eddyhhlure1Eddy/IntelligentVRAMNode && \
+    git clone https://github.com/eddyhhlure1Eddy/auto_wan2.2animate_freamtowindow_server && \
+    git clone https://github.com/eddyhhlure1Eddy/ComfyUI-AdaptiveWindowSize && \
+    cd ComfyUI-AdaptiveWindowSize/ComfyUI-AdaptiveWindowSize && \
+    mv * ../
+
+# Download Wan2.2 models
+RUN wget -q https://huggingface.co/Kijai/WanVideo_comfy_fp8_scaled/resolve/main/I2V/Wan2_2-I2V-A14B-HIGH_fp8_e4m3fn_scaled_KJ.safetensors -O /ComfyUI/models/diffusion_models/Wan2_2-I2V-A14B-HIGH_fp8_e4m3fn_scaled_KJ.safetensors
+RUN wget -q https://huggingface.co/Kijai/WanVideo_comfy_fp8_scaled/resolve/main/I2V/Wan2_2-I2V-A14B-LOW_fp8_e4m3fn_scaled_KJ.safetensors -O /ComfyUI/models/diffusion_models/Wan2_2-I2V-A14B-LOW_fp8_e4m3fn_scaled_KJ.safetensors
+
+# Download LoRA models
+RUN wget -q https://huggingface.co/lightx2v/Wan2.2-Lightning/resolve/main/Wan2.2-I2V-A14B-4steps-lora-rank64-Seko-V1/high_noise_model.safetensors -O /ComfyUI/models/loras/high_noise_model.safetensors
+RUN wget -q https://huggingface.co/lightx2v/Wan2.2-Lightning/resolve/main/Wan2.2-I2V-A14B-4steps-lora-rank64-Seko-V1/low_noise_model.safetensors -O /ComfyUI/models/loras/low_noise_model.safetensors
+
+# Download supporting models
+RUN wget -q https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/clip_vision/clip_vision_h.safetensors -O /ComfyUI/models/clip_vision/clip_vision_h.safetensors
+RUN wget -q https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/umt5-xxl-enc-bf16.safetensors -O /ComfyUI/models/text_encoders/umt5-xxl-enc-bf16.safetensors
+RUN wget -q https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Wan2_1_VAE_bf16.safetensors -O /ComfyUI/models/vae/Wan2_1_VAE_bf16.safetensors
+
+COPY src/ /src/
+COPY requirements.txt /requirements.txt
+COPY extra_model_paths.yaml /ComfyUI/extra_model_paths.yaml
+COPY entrypoint.sh /entrypoint.sh
+COPY workflows/ /workflows/
+
+RUN pip install -r /requirements.txt
+RUN chmod +x /entrypoint.sh
+
+CMD ["/entrypoint.sh"]
