@@ -184,17 +184,21 @@ def handler(job):
 
     # Handle image input for I2V (image_path, image_url, image_base64)
     image_path = None
-    task = job_input.get("task", "t2v")
+    task = job_input.get("task", "i2v")
     
-    if task == "i2v":
-        if "image_path" in job_input:
-            image_path = process_input(job_input["image_path"], task_id, "input_image.jpg", "path")
-        elif "image_url" in job_input:
-            image_path = process_input(job_input["image_url"], task_id, "input_image.jpg", "url")
-        elif "image_base64" in job_input:
-            image_path = process_input(job_input["image_base64"], task_id, "input_image.jpg", "base64")
-        else:
-            raise Exception("For I2V task, provide one of: image_path, image_url, or image_base64")
+    # Try to get image from input (for I2V)
+    if "image_path" in job_input:
+        image_path = process_input(job_input["image_path"], task_id, "input_image.jpg", "path")
+    elif "image_url" in job_input:
+        image_path = process_input(job_input["image_url"], task_id, "input_image.jpg", "url")
+    elif "image_base64" in job_input:
+        image_path = process_input(job_input["image_base64"], task_id, "input_image.jpg", "base64")
+    
+    # If no image provided, use default (for T2V or when image is optional)
+    if not image_path:
+        image_path = "/example_image.png"
+        logger.info("Using default image: /example_image.png")
+    else:
         logger.info(f"Using input image: {image_path}")
     
     # Load workflow
@@ -208,9 +212,8 @@ def handler(job):
     seed = job_input.get("seed", 42)
     cfg = job_input.get("cfg", 2.0)
     
-    # Set image if I2V
-    if task == "i2v" and image_path:
-        prompt["244"]["inputs"]["image"] = image_path
+    # Set image (always required for workflow)
+    prompt["244"]["inputs"]["image"] = image_path
     
     # Set parameters in workflow
     prompt["541"]["inputs"]["num_frames"] = length

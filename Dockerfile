@@ -76,6 +76,7 @@ COPY requirements.txt /requirements.txt
 COPY extra_model_paths.yaml /ComfyUI/extra_model_paths.yaml
 COPY entrypoint.sh /entrypoint.sh
 COPY workflows/ /workflows/
+COPY example_image.png /example_image.png
 
 RUN pip install -r /requirements.txt
 RUN chmod +x /entrypoint.sh
