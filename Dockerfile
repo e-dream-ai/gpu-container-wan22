@@ -21,14 +21,20 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel packaging
 RUN pip install --no-cache-dir \
     torch==2.4.0+cu118 \
     torchvision==0.19.0+cu118 \
+    torchaudio==2.4.0+cu118 \
     --index-url https://download.pytorch.org/whl/cu118
 
 WORKDIR /opt
 RUN git clone https://github.com/Wan-Video/Wan2.2.git wan22
 WORKDIR /opt/wan22
 
+# Create constraints file to prevent torch/torchvision upgrades
+RUN echo "torch==2.4.0+cu118" > /tmp/constraints.txt && \
+    echo "torchvision==0.19.0+cu118" >> /tmp/constraints.txt && \
+    echo "torchaudio==2.4.0+cu118" >> /tmp/constraints.txt
+
 RUN pip install --no-cache-dir \
-    torchaudio \
+    --constraint /tmp/constraints.txt \
     "opencv-python>=4.9.0.80" \
     "diffusers>=0.31.0" \
     "transformers>=4.49.0,<=4.51.3" \
@@ -43,9 +49,9 @@ RUN pip install --no-cache-dir \
     "numpy>=1.23.5,<2" \
     einops
 
-RUN pip install --no-cache-dir flash_attn || echo "flash_attn installation failed, continuing without it (optional)"
+RUN pip install --no-cache-dir --constraint /tmp/constraints.txt flash_attn || echo "flash_attn installation failed, continuing without it (optional)"
 
-RUN pip install --no-cache-dir "huggingface_hub"
+RUN pip install --no-cache-dir --constraint /tmp/constraints.txt "huggingface_hub"
 
 WORKDIR /opt/models
 RUN git lfs install --skip-smudge && \
@@ -57,7 +63,7 @@ RUN git lfs install --skip-smudge && \
 WORKDIR /opt/app
 COPY src/ ./src/
 COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --constraint /tmp/constraints.txt -r requirements.txt
 RUN mkdir -p /opt/app/output
 
 CMD ["python", "-u", "src/handler.py"]
